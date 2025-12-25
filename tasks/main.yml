@@ -1,0 +1,37 @@
+---
+- name: install packages
+  with_items: "{{ postfix_packages }}"
+  pkgng:
+    name: "{{ item.name }}"
+  notify:
+    - restart postfix
+
+- name: confgure postfix service
+  template:
+    src: postfix.j2
+    dest: /etc/rc.conf.d/postfix
+    owner: root
+    group: wheel
+
+- name: configure postfix
+  with_items: "{{ postfix_templates }}"
+  template:
+    src: "{{ item.filename }}.tpl"
+    dest: "{{ item.destination }}/{{ item.filename }}"
+  notify:
+    - restart postfix
+
+- name: create postfix sasl dir
+  file:
+    path: /usr/local/etc/postfix/sasl
+    state: directory
+
+- name: configure postfix sasl
+  template:
+    src: smtpd.conf.j2
+    dest: /usr/local/etc/postfix/sasl/smtpd.conf
+  notify:
+    - restart postfix
+
+- name: generate aliases.db
+  shell: "postalias /etc/mail/aliases"
